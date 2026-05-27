@@ -27,6 +27,47 @@ const links = $("a").length;
 const canonical =
 $('link[rel="canonical"]').attr("href");
 
+let missingAlt = 0;
+
+$("img").each((i, el) => {
+
+if (!$(el).attr("alt")) {
+missingAlt++;
+}
+
+});
+
+let internalLinks = 0;
+let externalLinks = 0;
+
+$("a").each((i, el) => {
+
+const href = $(el).attr("href");
+
+if (href) {
+
+if (href.startsWith("/") || href.includes(url)) {
+internalLinks++;
+} else {
+externalLinks++;
+}
+
+}
+
+});
+
+const text = $("body").text();
+
+const wordCount =
+text.trim().split(/\s+/).length;
+
+let seoScore = 100;
+
+if (!title) seoScore -= 10;
+if (!metaDescription) seoScore -= 10;
+if (!h1) seoScore -= 10;
+if (missingAlt > 0) seoScore -= 10;
+
 res.status(200).json({
 
 title,
@@ -35,7 +76,12 @@ h1,
 h2Count,
 images,
 links,
-canonical
+internalLinks,
+externalLinks,
+missingAlt,
+wordCount,
+canonical,
+seoScore
 
 });
 
