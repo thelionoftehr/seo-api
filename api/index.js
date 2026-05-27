@@ -27,6 +27,21 @@ const links = $("a").length;
 const canonical =
 $('link[rel="canonical"]').attr("href");
 
+const robotsTxt =
+`${url}/robots.txt`;
+
+const sitemap =
+`${url}/sitemap.xml`;
+
+const openGraph =
+$('meta[property="og:title"]').attr("content");
+
+const twitterCard =
+$('meta[name="twitter:card"]').attr("content");
+
+const schema =
+$('script[type="application/ld+json"]').length;
+
 let missingAlt = 0;
 
 $("img").each((i, el) => {
@@ -151,6 +166,7 @@ metaStatus,
 
 h1,
 h2Count,
+
 images,
 links,
 
@@ -158,9 +174,17 @@ internalLinks,
 externalLinks,
 
 missingAlt,
+
 wordCount,
 
 canonical,
+
+robotsTxt,
+sitemap,
+
+openGraph,
+twitterCard,
+schema,
 
 seoScore,
 
