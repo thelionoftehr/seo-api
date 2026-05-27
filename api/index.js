@@ -16,9 +16,27 @@ const title = $("title").text();
 const metaDescription =
 $('meta[name="description"]').attr("content");
 
+const h1 = $("h1").first().text();
+
+const h2Count = $("h2").length;
+
+const images = $("img").length;
+
+const links = $("a").length;
+
+const canonical =
+$('link[rel="canonical"]').attr("href");
+
 res.status(200).json({
+
 title,
-metaDescription
+metaDescription,
+h1,
+h2Count,
+images,
+links,
+canonical
+
 });
 
 } catch (error) {
