@@ -56,10 +56,40 @@ externalLinks++;
 
 });
 
-const text = $("body").text();
+const text = $("body").text()
+.toLowerCase()
+.replace(/[^\w\s]/gi, "");
 
-const wordCount =
-text.trim().split(/\s+/).length;
+const words = text.split(/\s+/);
+
+const wordCount = words.length;
+
+const stopWords = [
+"the","is","and","of","to","a","in","for",
+"on","with","at","by","an","be","this",
+"that","from","or","as","are","it"
+];
+
+const keywordMap = {};
+
+words.forEach(word => {
+
+if (
+word.length > 3 &&
+!stopWords.includes(word)
+) {
+
+keywordMap[word] =
+(keywordMap[word] || 0) + 1;
+
+}
+
+});
+
+const sortedKeywords =
+Object.entries(keywordMap)
+.sort((a, b) => b[1] - a[1])
+.slice(0, 10);
 
 let seoScore = 100;
 
@@ -81,7 +111,8 @@ externalLinks,
 missingAlt,
 wordCount,
 canonical,
-seoScore
+seoScore,
+topKeywords: sortedKeywords
 
 });
 
