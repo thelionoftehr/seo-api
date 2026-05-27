@@ -14,7 +14,7 @@ const $ = cheerio.load(response.data);
 const title = $("title").text();
 
 const metaDescription =
-$('meta[name="description"]').attr("content");
+$('meta[name="description"]').attr("content") || "";
 
 const h1 = $("h1").first().text();
 
@@ -93,25 +93,79 @@ Object.entries(keywordMap)
 
 let seoScore = 100;
 
-if (!title) seoScore -= 10;
-if (!metaDescription) seoScore -= 10;
-if (!h1) seoScore -= 10;
-if (missingAlt > 0) seoScore -= 10;
+const suggestions = [];
+
+if (!title) {
+seoScore -= 10;
+suggestions.push("Add title tag");
+}
+
+if (!metaDescription) {
+seoScore -= 10;
+suggestions.push("Add meta description");
+}
+
+if (!h1) {
+seoScore -= 10;
+suggestions.push("Add H1 heading");
+}
+
+if (missingAlt > 0) {
+seoScore -= 10;
+suggestions.push("Add alt text to images");
+}
+
+const titleLength = title.length;
+
+const metaLength = metaDescription.length;
+
+let titleStatus = "Good";
+
+if (titleLength < 30) {
+titleStatus = "Too Short";
+}
+
+if (titleLength > 60) {
+titleStatus = "Too Long";
+}
+
+let metaStatus = "Good";
+
+if (metaLength < 70) {
+metaStatus = "Too Short";
+}
+
+if (metaLength > 160) {
+metaStatus = "Too Long";
+}
 
 res.status(200).json({
 
 title,
+titleLength,
+titleStatus,
+
 metaDescription,
+metaLength,
+metaStatus,
+
 h1,
 h2Count,
 images,
 links,
+
 internalLinks,
 externalLinks,
+
 missingAlt,
 wordCount,
+
 canonical,
+
 seoScore,
+
+suggestions,
+
 topKeywords: sortedKeywords
 
 });
