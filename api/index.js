@@ -1,8 +1,3 @@
-muje lagta hai is me problem hai 
-
-
-
-
 const axios = require("axios");
 const cheerio = require("cheerio");
 
