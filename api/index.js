@@ -17,6 +17,14 @@ const $ = cheerio.load(response.data);
 
 // ================= PAGE SPEED =================
 
+let performance = null;
+let accessibility = null;
+let bestPractices = null;
+let seoAudit = null;
+let coreWebVitals = {};
+
+try {
+
 const pageSpeed =
 await axios.get(
 `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${url}&key=${API_KEY}`
@@ -25,20 +33,26 @@ await axios.get(
 const lighthouse =
 pageSpeed.data.lighthouseResult;
 
-const performance =
+performance =
 lighthouse.categories.performance.score * 100;
 
-const accessibility =
+accessibility =
 lighthouse.categories.accessibility.score * 100;
 
-const bestPractices =
+bestPractices =
 lighthouse.categories["best-practices"].score * 100;
 
-const seoAudit =
+seoAudit =
 lighthouse.categories.seo.score * 100;
 
-const coreWebVitals =
+coreWebVitals =
 pageSpeed.data.loadingExperience || {};
+
+} catch (e) {
+
+console.log("PageSpeed API failed");
+
+}
 
 // ================= DOMAIN =================
 
