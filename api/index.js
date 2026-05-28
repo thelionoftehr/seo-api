@@ -1,6 +1,8 @@
 const axios = require("axios");
 const cheerio = require("cheerio");
 
+const API_KEY = "AIzaSyBdrgAC97Jxuvr5DuSWKrbkir9-W62iUZM";
+
 module.exports = async (req, res) => {
 
 const url = req.query.url;
@@ -13,44 +15,87 @@ headers: { "User-Agent": "Mozilla/5.0" }
 
 const $ = cheerio.load(response.data);
 
+// ================= PAGE SPEED =================
+
+const pageSpeed =
+await axios.get(
+`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${url}&key=${API_KEY}`
+);
+
+const lighthouse =
+pageSpeed.data.lighthouseResult;
+
+const performance =
+lighthouse.categories.performance.score * 100;
+
+const accessibility =
+lighthouse.categories.accessibility.score * 100;
+
+const bestPractices =
+lighthouse.categories["best-practices"].score * 100;
+
+const seoAudit =
+lighthouse.categories.seo.score * 100;
+
+const coreWebVitals =
+pageSpeed.data.loadingExperience || {};
+
 // ================= DOMAIN =================
+
 const domain = new URL(url).hostname;
 
 // ================= BASIC SEO =================
+
 const title = $("title").text() || "";
+
 const metaDescription =
 $('meta[name="description"]').attr("content") || "";
 
 const h1 = $("h1").first().text() || "";
+
 const h2Count = $("h2").length;
+
 const h3Count = $("h3").length;
 
 // ================= LINKS =================
+
 const links = $("a").length;
+
 let internalLinks = 0;
 let externalLinks = 0;
 
 $("a").each((i, el) => {
+
 const href = $(el).attr("href");
 
 if (href) {
+
 if (href.startsWith("/") || href.includes(domain)) {
 internalLinks++;
 } else {
 externalLinks++;
 }
+
 }
+
 });
 
 // ================= IMAGES =================
+
 const images = $("img").length;
+
 let missingAlt = 0;
 
 $("img").each((i, el) => {
-if (!$(el).attr("alt")) missingAlt++;
+
+if (!$(el).attr("alt")) {
+missingAlt++;
+}
+
 });
 
-// ================= TECH CHECK =================
+// ================= TECH =================
+
 const canonical =
 $('link[rel="canonical"]').attr("href") || "";
 
@@ -70,30 +115,44 @@ $('meta[name^="twitter:"]').length;
 const schema =
 $('script[type="application/ld+json"]').length;
 
-// ================= FILE CHECKS =================
+// ================= ROBOTS & SITEMAP =================
+
 const robotsTxt = url + "/robots.txt";
+
 const sitemap = url + "/sitemap.xml";
 
 // ================= CONTENT =================
+
 const text = $("body").text()
 .toLowerCase()
 .replace(/[^\w\s]/gi, " ");
 
 const words = text.split(/\s+/).filter(Boolean);
+
 const wordCount = words.length;
 
 // ================= KEYWORDS =================
+
 const stopWords = [
-"the","is","and","of","to","a","in","for","on","with",
-"at","by","an","be","this","that","from","or","as","are","it"
+"the","is","and","of","to","a","in","for",
+"on","with","at","by","an","be","this",
+"that","from","or","as","are","it"
 ];
 
 const keywordMap = {};
 
 words.forEach(word => {
-if (word.length > 3 && !stopWords.includes(word)) {
-keywordMap[word] = (keywordMap[word] || 0) + 1;
+
+if (
+word.length > 3 &&
+!stopWords.includes(word)
+) {
+
+keywordMap[word] =
+(keywordMap[word] || 0) + 1;
+
 }
+
 });
 
 const topKeywords =
@@ -102,20 +161,42 @@ Object.entries(keywordMap)
 .slice(0, 10);
 
 // ================= SEO SCORE =================
+
 let seoScore = 100;
+
 const suggestions = [];
 
-if (!title) { seoScore -= 10; suggestions.push("Add title"); }
-if (!metaDescription) { seoScore -= 10; suggestions.push("Add meta description"); }
-if (!h1) { seoScore -= 10; suggestions.push("Add H1"); }
-if (missingAlt > 0) { seoScore -= 10; suggestions.push("Fix image alt tags"); }
-if (!canonical) { seoScore -= 5; suggestions.push("Add canonical tag"); }
+if (!title) {
+seoScore -= 10;
+suggestions.push("Add title");
+}
 
-// ================= META LENGTH =================
+if (!metaDescription) {
+seoScore -= 10;
+suggestions.push("Add meta description");
+}
+
+if (!h1) {
+seoScore -= 10;
+suggestions.push("Add H1");
+}
+
+if (missingAlt > 0) {
+seoScore -= 10;
+suggestions.push("Fix image alt tags");
+}
+
+if (!canonical) {
+seoScore -= 5;
+suggestions.push("Add canonical tag");
+}
+
+// ================= META STATUS =================
+
 const titleLength = title.length;
+
 const metaLength = metaDescription.length;
 
-// ================= STATUS =================
 const titleStatus =
 titleLength < 30 ? "Too Short" :
 titleLength > 60 ? "Too Long" : "Good";
@@ -124,46 +205,23 @@ const metaStatus =
 metaLength < 70 ? "Too Short" :
 metaLength > 160 ? "Too Long" : "Good";
 
-// ================= ADVANCED FREE CHECKS =================
+// ================= EXTRA =================
 
-// SSL
-const ssl = url.startsWith("https") ? "Yes" : "No";
+const ssl =
+url.startsWith("https") ? "Yes" : "No";
 
-// WWW CHECK
-const www = domain.startsWith("www") ? "Yes" : "No";
+const www =
+domain.startsWith("www") ? "Yes" : "No";
 
-// INDEXABILITY (basic)
-const indexable = metaDescription.includes("noindex") ? "No" : "Yes";
-
-// REDIRECT (basic guess)
-const redirect = url.includes("http://") ? "Yes" : "No";
-
-// SOCIAL LINKS
-let socialLinks = 0;
-$("a").each((i, el) => {
-const href = $(el).attr("href") || "";
-if (
-href.includes("facebook") ||
-href.includes("twitter") ||
-href.includes("instagram") ||
-href.includes("linkedin")
-) {
-socialLinks++;
-}
-});
-
-// CMS DETECTION (basic)
-const cms =
-generator.includes("WordPress") ? "WordPress" :
-generator.includes("Shopify") ? "Shopify" :
-generator ? generator : "Unknown";
+const redirect =
+url.includes("http://") ? "Yes" : "No";
 
 // ================= OUTPUT =================
+
 res.status(200).json({
 
 domain,
 
-// BASIC SEO
 title,
 titleLength,
 titleStatus,
@@ -176,42 +234,40 @@ h1,
 h2Count,
 h3Count,
 
-// LINKS
 links,
 internalLinks,
 externalLinks,
-socialLinks,
 
-// IMAGES
 images,
 missingAlt,
 
-// TECH
 canonical,
 favicon,
 generator,
-cms,
-schema,
-openGraph,
-twitterCard,
 
-// FILES
 robotsTxt,
 sitemap,
 
-// CONTENT
-wordCount,
-topKeywords,
+openGraph,
+twitterCard,
+schema,
 
-// STATUS
 ssl,
 www,
-indexable,
 redirect,
 
-// SEO
+wordCount,
+
+topKeywords,
+
 seoScore,
-suggestions
+suggestions,
+
+performance,
+accessibility,
+bestPractices,
+seoAudit,
+coreWebVitals
 
 });
 
