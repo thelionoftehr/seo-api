@@ -112,6 +112,9 @@ module.exports = async (req, res) => {
     if (missingAlt > 0) { seoScore -= 10; suggestions.push("Fix image alt tags"); }
     if (!canonical) { seoScore -= 5; suggestions.push("Add canonical tag"); }
 
+    if (seoScore < 0) seoScore = 0;
+    if (seoScore > 100) seoScore = 100;
+
     // ================= META LENGTH =================
     const titleLength = title.length;
     const metaLength = metaDescription.length;
@@ -128,7 +131,14 @@ module.exports = async (req, res) => {
 
     const ssl = url.startsWith("https") ? "Yes" : "No";
     const www = domain.startsWith("www") ? "Yes" : "No";
-    const indexable = metaDescription.includes("noindex") ? "No" : "Yes";
+
+    // FIXED INDEXABILITY
+    const noIndexMeta =
+      $('meta[name="robots"]').attr("content") || "";
+
+    const indexable =
+      noIndexMeta.includes("noindex") ? "No" : "Yes";
+
     const redirect = url.includes("http://") ? "Yes" : "No";
 
     let socialLinks = 0;
@@ -149,58 +159,57 @@ module.exports = async (req, res) => {
       generator.includes("Shopify") ? "Shopify" :
       generator ? generator : "Unknown";
 
-    // ================= PAGE SPEED INSIGHTS (NEW 🔥) =================
+    // ================= PAGE SPEED INSIGHTS (FIXED 🔥) =================
     let pageSpeed = {};
 
-try {
-  const apiKey = process.env.PAGESPEED_API_KEY;
+    try {
+      const apiKey = process.env.PAGESPEED_API_KEY;
 
-  if (!apiKey) {
-    throw new Error("API key missing in env");
-  }
+      if (!apiKey) throw new Error("API key missing");
 
-  const pagespeedUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&key=${apiKey}&strategy=mobile`;
+      const pagespeedUrl =
+        `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&key=${apiKey}&strategy=mobile`;
 
-  const psResponse = await axios.get(pagespeedUrl);
+      const psResponse = await axios.get(pagespeedUrl);
 
-  const data = psResponse.data;
+      const data = psResponse.data;
 
-  if (!data.lighthouseResult) {
-    throw new Error(JSON.stringify(data));
-  }
+      if (!data.lighthouseResult) {
+        throw new Error("Invalid PageSpeed response");
+      }
 
-  const lighthouse = data.lighthouseResult;
+      const lighthouse = data.lighthouseResult;
 
-  pageSpeed = {
-    performance: lighthouse?.categories?.performance?.score
-      ? lighthouse.categories.performance.score * 100
-      : null,
+      pageSpeed = {
+        performance: lighthouse?.categories?.performance?.score != null
+          ? Math.round(lighthouse.categories.performance.score * 100)
+          : 0,
 
-    accessibility: lighthouse?.categories?.accessibility?.score
-      ? lighthouse.categories.accessibility.score * 100
-      : null,
+        accessibility: lighthouse?.categories?.accessibility?.score != null
+          ? Math.round(lighthouse.categories.accessibility.score * 100)
+          : 0,
 
-    bestPractices: lighthouse?.categories?.["best-practices"]?.score
-      ? lighthouse.categories["best-practices"].score * 100
-      : null,
+        bestPractices: lighthouse?.categories?.["best-practices"]?.score != null
+          ? Math.round(lighthouse.categories["best-practices"].score * 100)
+          : 0,
 
-    seo: lighthouse?.categories?.seo?.score
-      ? lighthouse.categories.seo.score * 100
-      : null,
+        seo: lighthouse?.categories?.seo?.score != null
+          ? Math.round(lighthouse.categories.seo.score * 100)
+          : 0,
 
-    firstContentfulPaint: lighthouse?.audits?.["first-contentful-paint"]?.displayValue || null,
-    speedIndex: lighthouse?.audits?.["speed-index"]?.displayValue || null,
-    largestContentfulPaint: lighthouse?.audits?.["largest-contentful-paint"]?.displayValue || null,
-    totalBlockingTime: lighthouse?.audits?.["total-blocking-time"]?.displayValue || null,
-    cumulativeLayoutShift: lighthouse?.audits?.["cumulative-layout-shift"]?.displayValue || null
-  };
+        firstContentfulPaint: lighthouse?.audits?.["first-contentful-paint"]?.displayValue || null,
+        speedIndex: lighthouse?.audits?.["speed-index"]?.displayValue || null,
+        largestContentfulPaint: lighthouse?.audits?.["largest-contentful-paint"]?.displayValue || null,
+        totalBlockingTime: lighthouse?.audits?.["total-blocking-time"]?.displayValue || null,
+        cumulativeLayoutShift: lighthouse?.audits?.["cumulative-layout-shift"]?.displayValue || null
+      };
 
-} catch (err) {
-  pageSpeed = {
-    error: "PageSpeed failed",
-    debug: err.message
-  };
-}
+    } catch (err) {
+      pageSpeed = {
+        error: "PageSpeed failed",
+        debug: err.message
+      };
+    }
 
     // ================= FINAL OUTPUT =================
     res.status(200).json({
@@ -257,14 +266,15 @@ try {
       seoScore,
       suggestions,
 
-      // ⚡ PAGE SPEED (NEW)
+      // ⚡ PAGE SPEED
       pageSpeed
 
     });
 
   } catch (error) {
     res.status(500).json({
-      error: "SEO analysis failed"
+      error: "SEO analysis failed",
+      debug: error.message
     });
   }
 
