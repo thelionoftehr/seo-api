@@ -10,7 +10,11 @@ const url = req.query.url;
 try {
 
 const response = await axios.get(url, {
-headers: { "User-Agent": "Mozilla/5.0" }
+headers: {
+"User-Agent": "Mozilla/5.0"
+},
+timeout: 10000,
+maxRedirects: 5
 });
 
 const $ = cheerio.load(response.data);
@@ -287,10 +291,18 @@ coreWebVitals
 
 } catch (error) {
 
-res.status(500).json({
-error: "SEO analysis failed"
+} catch (error) {
+
+if (error.code === "ECONNABORTED") {
+
+return res.status(408).json({
+error: "Website took too long to respond"
 });
 
 }
 
-};
+res.status(500).json({
+error: "Website blocked requests or unavailable"
+});
+
+}
